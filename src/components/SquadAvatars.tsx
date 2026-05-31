@@ -23,7 +23,9 @@ export function SquadAvatars({ members }: SquadAvatarsProps) {
           }}
           className="relative -ml-3 first:ml-0"
           style={{ zIndex: members.length - index }}
-          title={member.name}
+          title={
+            member.age ? `${member.name}, ${member.age}` : member.name
+          }
         >
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-full border-2 bg-gradient-to-br text-xs font-semibold text-white shadow-lg ${
@@ -34,16 +36,24 @@ export function SquadAvatars({ members }: SquadAvatarsProps) {
                   : "border-black"
             } ${member.gradient}`}
           >
-            {member.name.charAt(0)}
+            {member.name.charAt(0).toUpperCase()}
           </div>
           {member.isLive ? (
             <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-black bg-emerald-400" />
           ) : null}
         </motion.div>
       ))}
-      <span className="ml-3 text-sm text-white/50">
-        {members.length} nearby
-      </span>
+      <div className="ml-3 text-sm text-white/50">
+        <p>{members.length} in squad</p>
+        {members.some((member) => member.age) ? (
+          <p className="text-xs text-white/30">
+            {members
+              .filter((member) => member.isLive && member.age)
+              .map((member) => `${member.name} ${member.age}`)
+              .join(" · ")}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

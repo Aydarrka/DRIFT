@@ -24,7 +24,7 @@ export const VIBE_OPTIONS = [
 const MATCHES: Record<Vibe, Omit<MatchResult, "vibe" | "isLiveMatch">> = {
   active: {
     plan: "Катаем на самокатах по Южной Магистрали",
-    location: "Южная Магистраль, Бишкек",
+    location: "Южная Магистраль, Bishkek",
     members: [
       { id: "1", name: "Айбек", gradient: "from-emerald-400 to-teal-600" },
       { id: "2", name: "Нур", gradient: "from-lime-400 to-green-600" },
@@ -33,8 +33,8 @@ const MATCHES: Record<Vibe, Omit<MatchResult, "vibe" | "isLiveMatch">> = {
     ],
   },
   chill: {
-    plan: "Берем холодный кофе в Sierra и сидим на траве на Эркиндик",
-    location: "Sierra → Эркиндик, Бишкек",
+    plan: "Берем холодный кофе в Sierra и сидим на траве на Эркиндik",
+    location: "Sierra → Эркиндik, Bishkek",
     members: [
       { id: "1", name: "Алина", gradient: "from-sky-400 to-indigo-600" },
       { id: "2", name: "Бек", gradient: "from-blue-400 to-violet-600" },
@@ -43,7 +43,7 @@ const MATCHES: Record<Vibe, Omit<MatchResult, "vibe" | "isLiveMatch">> = {
   },
   "deep-talk": {
     plan: "Идем обсуждать стартапы в парк Панфилова",
-    location: "Парк Панфилова, Бишкек",
+    location: "Парк Панфилова, Bishkek",
     members: [
       { id: "1", name: "Артём", gradient: "from-violet-400 to-purple-700" },
       { id: "2", name: "Жанна", gradient: "from-fuchsia-400 to-pink-600" },
@@ -70,6 +70,13 @@ interface BuildMatchOptions {
   isLiveMatch: boolean;
 }
 
+const LIVE_GRADIENTS = [
+  "from-emerald-300 to-teal-500",
+  "from-sky-300 to-indigo-500",
+  "from-violet-300 to-fuchsia-500",
+  "from-amber-300 to-orange-500",
+];
+
 function buildLiveMembers(
   peers: SearchPeer[],
   selfTabId: string,
@@ -77,21 +84,27 @@ function buildLiveMembers(
   let guestIndex = 0;
 
   return peers.map((peer) => {
-    if (peer.tabId === selfTabId) {
+    const isSelf = peer.tabId === selfTabId;
+
+    if (isSelf) {
       return {
         id: peer.tabId,
-        name: "You",
+        name: peer.displayName,
+        age: peer.age,
         gradient: "from-white to-zinc-400",
         isSelf: true,
         isLive: true,
       };
     }
 
+    const gradient = LIVE_GRADIENTS[guestIndex % LIVE_GRADIENTS.length];
     guestIndex += 1;
+
     return {
       id: peer.tabId,
-      name: guestIndex === 1 ? "Guest" : `Guest ${guestIndex}`,
-      gradient: "from-emerald-300 to-teal-500",
+      name: peer.displayName,
+      age: peer.age,
+      gradient,
       isLive: true,
     };
   });
@@ -106,15 +119,17 @@ export function buildMatchResult({
 }: BuildMatchOptions): MatchResult {
   const base = MATCHES[vibe];
   const locationLabel = location?.label ?? base.location;
+  const spotName = location?.shortLabel ?? location?.label?.split(",")[0];
 
   const members =
     isLiveMatch && peers.length >= 2
       ? buildLiveMembers(peers, selfTabId)
       : base.members;
 
-  const plan = location
-    ? `${base.plan} · стартуем рядом с ${location.label.split(",")[0]}`
-    : base.plan;
+  const plan =
+    location && spotName
+      ? `${base.plan} · стартуем рядом с ${spotName}`
+      : base.plan;
 
   return {
     vibe,

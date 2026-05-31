@@ -13,6 +13,7 @@ import { getClientTabId, startLiveSearch } from "@/lib/liveMatch";
 export default function SearchingPage() {
   const router = useRouter();
   const {
+    profile,
     selectedVibe,
     setMatchResult,
     location,
@@ -23,9 +24,12 @@ export default function SearchingPage() {
   const tabId = useMemo(() => getClientTabId(), []);
 
   useEffect(() => {
+    if (!profile) return;
+
     const cleanup = startLiveSearch({
       vibe: selectedVibe,
       location,
+      profile,
       tabId,
       onPeerCount: setPeerCount,
       onMatch: (match) => {
@@ -35,7 +39,9 @@ export default function SearchingPage() {
     });
 
     return cleanup;
-  }, [selectedVibe, location, tabId, setMatchResult, router]);
+  }, [selectedVibe, location, profile, tabId, setMatchResult, router]);
+
+  if (!profile) return null;
 
   return (
     <PageShell className="items-center">
@@ -49,6 +55,8 @@ export default function SearchingPage() {
         <div className="mt-4 flex justify-center">
           <LocationPill
             label={location?.label}
+            shortLabel={location?.shortLabel}
+            detail={location?.detail}
             loading={!location && !locationError}
             error={locationError}
             onRetry={refreshLocation}
@@ -62,7 +70,7 @@ export default function SearchingPage() {
       <div className="w-full space-y-4 pb-6">
         <LiveSearchBanner
           peerCount={peerCount}
-          locationLabel={location?.label ?? (locationError ? "Bishkek (demo)" : null)}
+          locationLabel={location?.shortLabel ?? location?.label}
         />
         <StatusText peerCount={peerCount} />
       </div>

@@ -1,8 +1,15 @@
 export type Vibe = "active" | "chill" | "deep-talk";
 
+export interface UserProfile {
+  name: string;
+  age: number;
+  locationOverride?: string;
+}
+
 export interface SquadMember {
   id: string;
   name: string;
+  age?: number;
   gradient: string;
   isSelf?: boolean;
   isLive?: boolean;
@@ -12,6 +19,8 @@ export interface UserLocation {
   lat: number;
   lng: number;
   label: string;
+  shortLabel: string;
+  detail?: string;
   accuracy?: number;
 }
 
@@ -37,5 +46,7 @@ export interface SearchPeer {
   lat: number;
   lng: number;
   locationLabel: string;
+  displayName: string;
+  age: number;
   joinedAt: number;
 }

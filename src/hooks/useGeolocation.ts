@@ -9,7 +9,7 @@ import type { UserLocation } from "@/lib/types";
 
 type GeoStatus = "idle" | "loading" | "ready" | "error";
 
-export function useGeolocation() {
+export function useGeolocation(locationOverride?: string) {
   const [status, setStatus] = useState<GeoStatus>("loading");
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export function useGeolocation() {
     setError(null);
 
     try {
-      const result = await requestUserLocation();
+      const result = await requestUserLocation(locationOverride);
       setLocation(result);
       setStatus("ready");
       return result;
@@ -29,12 +29,12 @@ export function useGeolocation() {
       setStatus("error");
       return null;
     }
-  }, []);
+  }, [locationOverride]);
 
   useEffect(() => {
     let cancelled = false;
 
-    requestUserLocation()
+    requestUserLocation(locationOverride)
       .then((result) => {
         if (cancelled) return;
         setLocation(result);
@@ -49,7 +49,7 @@ export function useGeolocation() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locationOverride]);
 
   return { location, status, error, refresh, isDemoMode: status === "error" };
 }

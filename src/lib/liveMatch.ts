@@ -1,6 +1,12 @@
 import { getQueueLocation, haversineKm, getTabId } from "@/lib/geolocation";
 import { buildMatchResult } from "@/lib/mockData";
-import type { MatchResult, SearchPeer, UserLocation, Vibe } from "@/lib/types";
+import type {
+  MatchResult,
+  SearchPeer,
+  UserLocation,
+  UserProfile,
+  Vibe,
+} from "@/lib/types";
 
 const CHANNEL_NAME = "drift-live-match-v1";
 const STORAGE_KEY = "drift-live-queue";
@@ -12,11 +18,20 @@ const QUEUE_TTL_MS = 45000;
 
 type MatchMessage =
   | { type: "queue-update" }
-  | { type: "match-found"; match: MatchResult; peerIds: string[]; leaderId: string };
+  | {
+      type: "match-found";
+      peers: SearchPeer[];
+      vibe: Vibe;
+      location: UserLocation;
+      peerIds: string[];
+      leaderId: string;
+      isLiveMatch: boolean;
+    };
 
 export interface LiveSearchOptions {
   vibe: Vibe;
   location: UserLocation | null;
+  profile: UserProfile;
   tabId: string;
   onPeerCount: (count: number) => void;
   onMatch: (match: MatchResult) => void;
@@ -75,6 +90,7 @@ function getMatchingPeers(
 function joinQueue(
   vibe: Vibe,
   queueLocation: UserLocation,
+  profile: UserProfile,
   tabId: string,
 ): SearchPeer[] {
   const entry: SearchPeer = {
@@ -83,6 +99,8 @@ function joinQueue(
     lat: queueLocation.lat,
     lng: queueLocation.lng,
     locationLabel: queueLocation.label,
+    displayName: profile.name,
+    age: profile.age,
     joinedAt: Date.now(),
   };
 
@@ -102,9 +120,26 @@ function pickLeader(peers: SearchPeer[]): string {
   return [...peers].sort((a, b) => a.tabId.localeCompare(b.tabId))[0].tabId;
 }
 
+function createMatch(
+  vibe: Vibe,
+  location: UserLocation,
+  peers: SearchPeer[],
+  selfTabId: string,
+  isLiveMatch: boolean,
+): MatchResult {
+  return buildMatchResult({
+    vibe,
+    location,
+    peers,
+    selfTabId: selfTabId,
+    isLiveMatch,
+  });
+}
+
 export function startLiveSearch({
   vibe,
   location,
+  profile,
   tabId,
   onPeerCount,
   onMatch,
@@ -136,38 +171,38 @@ export function startLiveSearch({
 
       if (leaderId === tabId && !liveMatchTimer) {
         liveMatchTimer = setTimeout(() => {
-          const match = buildMatchResult({
-            vibe,
-            location: location ?? queueLocation,
-            peers,
-            selfTabId: tabId,
-            isLiveMatch: true,
-          });
+          const matchLocation = location ?? queueLocation;
 
           broadcast({
             type: "match-found",
-            match,
+            peers,
+            vibe,
+            location: matchLocation,
             peerIds: peers.map((peer) => peer.tabId),
             leaderId,
+            isLiveMatch: true,
           });
-          finish(match);
+
+          finish(
+            createMatch(vibe, matchLocation, peers, tabId, true),
+          );
         }, LIVE_MATCH_DELAY_MS);
       }
     }
   };
 
-  joinQueue(vibe, queueLocation, tabId);
+  joinQueue(vibe, queueLocation, profile, tabId);
   evaluate();
 
   soloTimer = setTimeout(() => {
     finish(
-      buildMatchResult({
+      createMatch(
         vibe,
-        location: location ?? queueLocation,
-        peers: getMatchingPeers(vibe, queueLocation, tabId, hasRealLocation),
-        selfTabId: tabId,
-        isLiveMatch: false,
-      }),
+        location ?? queueLocation,
+        getMatchingPeers(vibe, queueLocation, tabId, hasRealLocation),
+        tabId,
+        false,
+      ),
     );
   }, SOLO_FALLBACK_MS);
 
@@ -189,7 +224,15 @@ export function startLiveSearch({
       message.peerIds.includes(tabId) &&
       message.leaderId !== tabId
     ) {
-      finish(message.match);
+      finish(
+        createMatch(
+          message.vibe,
+          message.location,
+          message.peers,
+          tabId,
+          message.isLiveMatch,
+        ),
+      );
     }
   };
 

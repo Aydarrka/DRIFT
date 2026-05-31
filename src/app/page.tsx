@@ -10,6 +10,7 @@ import { useDrift } from "@/context/DriftProvider";
 export default function HomePage() {
   const router = useRouter();
   const {
+    profile,
     selectedVibe,
     setSelectedVibe,
     resetMatch,
@@ -32,7 +33,7 @@ export default function HomePage() {
           DRIFT
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-          Kill the boredom
+          Hey, {profile?.name}
         </h1>
         <p className="mt-2 text-sm text-white/45">
           One tap. One vibe. A squad nearby.
@@ -40,6 +41,8 @@ export default function HomePage() {
         <div className="mt-4 flex justify-center">
           <LocationPill
             label={location?.label}
+            shortLabel={location?.shortLabel}
+            detail={location?.detail}
             loading={isLocating}
             error={locationError}
             onRetry={refreshLocation}
@@ -54,7 +57,7 @@ export default function HomePage() {
 
       <div className="mt-6 space-y-2 text-center text-xs text-white/30">
         <p>Live demo: open two tabs, same vibe, tap I&apos;m bored in both.</p>
-        <p>Works even in demo mode — tabs match on this device.</p>
+        <p>Use different names in each tab to see real squad labels.</p>
       </div>
     </PageShell>
   );

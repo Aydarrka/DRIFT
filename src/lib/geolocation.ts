@@ -5,6 +5,7 @@ export const BISHKEK_FALLBACK: UserLocation = {
   lat: 42.8746,
   lng: 74.5698,
   label: "Bishkek",
+  shortLabel: "Bishkek",
 };
 
 export function haversineKm(
@@ -28,17 +29,26 @@ export function formatCoords(lat: number, lng: number): string {
   return `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
 }
 
+interface GeocodeResponse {
+  label: string;
+  shortLabel: string;
+  detail?: string;
+}
+
 export async function reverseGeocode(
   lat: number,
   lng: number,
-): Promise<string> {
+): Promise<GeocodeResponse> {
   try {
     const res = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`);
     if (!res.ok) throw new Error("geocode failed");
-    const data = (await res.json()) as { label: string };
-    return data.label;
+    return (await res.json()) as GeocodeResponse;
   } catch {
-    return formatCoords(lat, lng);
+    return {
+      label: formatCoords(lat, lng),
+      shortLabel: "Near you",
+      detail: formatCoords(lat, lng),
+    };
   }
 }
 
@@ -61,7 +71,9 @@ function getPosition(options: PositionOptions): Promise<GeolocationPosition> {
   });
 }
 
-export async function requestUserLocation(): Promise<UserLocation> {
+export async function requestUserLocation(
+  locationOverride?: string,
+): Promise<UserLocation> {
   if (typeof window === "undefined" || !navigator.geolocation) {
     throw new Error("Geolocation is not supported in this browser");
   }
@@ -76,25 +88,51 @@ export async function requestUserLocation(): Promise<UserLocation> {
 
   try {
     position = await getPosition({
-      enableHighAccuracy: false,
-      timeout: 15000,
-      maximumAge: 300000,
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0,
     });
   } catch (firstError) {
     const geoError = firstError as GeolocationPositionError;
     if (geoError.code === 1) throw firstError;
 
     position = await getPosition({
-      enableHighAccuracy: true,
-      timeout: 20000,
-      maximumAge: 0,
+      enableHighAccuracy: false,
+      timeout: 15000,
+      maximumAge: 60000,
     });
   }
 
   const { latitude: lat, longitude: lng, accuracy } = position.coords;
-  const label = await reverseGeocode(lat, lng);
+  const geocoded = await reverseGeocode(lat, lng);
 
-  return { lat, lng, label, accuracy };
+  const shortLabel = locationOverride?.trim() || geocoded.shortLabel;
+  const label = locationOverride?.trim()
+    ? `${locationOverride.trim()}${geocoded.label.includes("Bishkek") ? ", Bishkek" : ""}`
+    : geocoded.label;
+
+  return {
+    lat,
+    lng,
+    label,
+    shortLabel,
+    detail: geocoded.detail,
+    accuracy,
+  };
+}
+
+export function applyLocationOverride(
+  location: UserLocation,
+  override?: string,
+): UserLocation {
+  if (!override?.trim()) return location;
+
+  const spot = override.trim();
+  return {
+    ...location,
+    shortLabel: spot,
+    label: spot.includes("Bishkek") ? spot : `${spot}, Bishkek`,
+  };
 }
 
 export function getGeolocationErrorMessage(error: unknown): string {
@@ -107,7 +145,6 @@ export function getGeolocationErrorMessage(error: unknown): string {
   return "Location unavailable — using demo mode";
 }
 
-/** Location for matching queue — real GPS or Bishkek fallback */
 export function getQueueLocation(location: UserLocation | null): UserLocation {
   return location ?? BISHKEK_FALLBACK;
 }
@@ -122,4 +159,24 @@ export function getTabId(): string {
     sessionStorage.setItem(key, tabId);
   }
   return tabId;
+}
+
+export const PROFILE_STORAGE_KEY = "drift-profile";
+
+export function loadProfile(): import("./types").UserProfile | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as import("./types").UserProfile;
+    if (!parsed.name?.trim() || !parsed.age) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function saveProfile(profile: import("./types").UserProfile) {
+  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
 }

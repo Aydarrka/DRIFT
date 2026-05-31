@@ -6,11 +6,16 @@ import {
   useContext,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
-import type { MatchResult, UserLocation, Vibe } from "@/lib/types";
+import { loadProfile, saveProfile } from "@/lib/geolocation";
+import type { MatchResult, UserLocation, UserProfile, Vibe } from "@/lib/types";
 
 interface DriftContextValue {
+  profile: UserProfile | null;
+  setProfile: (profile: UserProfile) => void;
+  isLoggedIn: boolean;
   selectedVibe: Vibe;
   setSelectedVibe: (vibe: Vibe) => void;
   matchResult: MatchResult | null;
@@ -26,7 +31,19 @@ interface DriftContextValue {
 
 const DriftContext = createContext<DriftContextValue | null>(null);
 
+function subscribeToProfile() {
+  return () => {};
+}
+
 export function DriftProvider({ children }: { children: ReactNode }) {
+  const cachedProfile = useSyncExternalStore(
+    subscribeToProfile,
+    () => loadProfile(),
+    () => null,
+  );
+  const [sessionProfile, setSessionProfile] = useState<UserProfile | null>(null);
+  const profile = sessionProfile ?? cachedProfile;
+
   const [selectedVibe, setSelectedVibe] = useState<Vibe>("chill");
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [location, setLocation] = useState<UserLocation | null>(null);
@@ -34,6 +51,11 @@ export function DriftProvider({ children }: { children: ReactNode }) {
   const [refreshLocation, setRefreshLocationState] = useState<() => void>(
     () => () => {},
   );
+
+  const setProfile = useCallback((next: UserProfile) => {
+    saveProfile(next);
+    setSessionProfile(next);
+  }, []);
 
   const setRefreshLocation = useCallback((fn: () => void) => {
     setRefreshLocationState(() => fn);
@@ -45,6 +67,9 @@ export function DriftProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
+      profile,
+      setProfile,
+      isLoggedIn: profile !== null,
       selectedVibe,
       setSelectedVibe,
       matchResult,
@@ -58,6 +83,8 @@ export function DriftProvider({ children }: { children: ReactNode }) {
       resetMatch,
     }),
     [
+      profile,
+      setProfile,
       selectedVibe,
       matchResult,
       location,

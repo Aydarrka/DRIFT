@@ -5,6 +5,8 @@ import { Loader2, Navigation, RefreshCw } from "lucide-react";
 
 interface LocationPillProps {
   label?: string | null;
+  shortLabel?: string | null;
+  detail?: string | null;
   loading?: boolean;
   error?: string | null;
   compact?: boolean;
@@ -13,6 +15,8 @@ interface LocationPillProps {
 
 export function LocationPill({
   label,
+  shortLabel,
+  detail,
   loading,
   error,
   compact = false,
@@ -22,9 +26,9 @@ export function LocationPill({
     ? "Locating you..."
     : error
       ? "Demo mode · tap to enable location"
-      : label
-        ? label
-        : "Near you";
+      : shortLabel || label || "Near you";
+
+  const tooltip = error || detail || label || undefined;
 
   const content = (
     <>
@@ -35,7 +39,7 @@ export function LocationPill({
       ) : (
         <Navigation className="h-3.5 w-3.5 text-emerald-400" />
       )}
-      <span className="max-w-[240px] truncate">{text}</span>
+      <span className="max-w-[260px] truncate">{text}</span>
     </>
   );
 
@@ -51,7 +55,7 @@ export function LocationPill({
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         className={`${className} cursor-pointer transition hover:border-amber-300/30 hover:bg-amber-300/5`}
-        title={error}
+        title={tooltip}
       >
         {content}
       </motion.button>
@@ -63,7 +67,7 @@ export function LocationPill({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       className={className}
-      title={error ?? undefined}
+      title={tooltip}
     >
       {content}
     </motion.div>
