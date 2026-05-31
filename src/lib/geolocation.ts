@@ -160,23 +160,3 @@ export function getTabId(): string {
   }
   return tabId;
 }
-
-export const PROFILE_STORAGE_KEY = "drift-profile";
-
-export function loadProfile(): import("./types").UserProfile | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as import("./types").UserProfile;
-    if (!parsed.name?.trim() || !parsed.age) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function saveProfile(profile: import("./types").UserProfile) {
-  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-}

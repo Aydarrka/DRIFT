@@ -5,11 +5,15 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState,
   useSyncExternalStore,
+  useState,
   type ReactNode,
 } from "react";
-import { loadProfile, saveProfile } from "@/lib/geolocation";
+import {
+  getProfileSnapshot,
+  saveProfile,
+  subscribeToProfile,
+} from "@/lib/profileStore";
 import type { MatchResult, UserLocation, UserProfile, Vibe } from "@/lib/types";
 
 interface DriftContextValue {
@@ -31,18 +35,12 @@ interface DriftContextValue {
 
 const DriftContext = createContext<DriftContextValue | null>(null);
 
-function subscribeToProfile() {
-  return () => {};
-}
-
 export function DriftProvider({ children }: { children: ReactNode }) {
-  const cachedProfile = useSyncExternalStore(
+  const profile = useSyncExternalStore(
     subscribeToProfile,
-    () => loadProfile(),
+    getProfileSnapshot,
     () => null,
   );
-  const [sessionProfile, setSessionProfile] = useState<UserProfile | null>(null);
-  const profile = sessionProfile ?? cachedProfile;
 
   const [selectedVibe, setSelectedVibe] = useState<Vibe>("chill");
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
@@ -54,7 +52,6 @@ export function DriftProvider({ children }: { children: ReactNode }) {
 
   const setProfile = useCallback((next: UserProfile) => {
     saveProfile(next);
-    setSessionProfile(next);
   }, []);
 
   const setRefreshLocation = useCallback((fn: () => void) => {
