@@ -8,14 +8,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getMatchForVibe } from "@/lib/mockData";
-import type { MatchResult, Vibe } from "@/lib/types";
+import type { MatchResult, UserLocation, Vibe } from "@/lib/types";
 
 interface DriftContextValue {
   selectedVibe: Vibe;
   setSelectedVibe: (vibe: Vibe) => void;
   matchResult: MatchResult | null;
-  generateMatch: () => MatchResult;
+  setMatchResult: (result: MatchResult | null) => void;
+  location: UserLocation | null;
+  setLocation: (location: UserLocation | null) => void;
+  locationError: string | null;
+  setLocationError: (error: string | null) => void;
   resetMatch: () => void;
 }
 
@@ -24,12 +27,8 @@ const DriftContext = createContext<DriftContextValue | null>(null);
 export function DriftProvider({ children }: { children: ReactNode }) {
   const [selectedVibe, setSelectedVibe] = useState<Vibe>("chill");
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
-
-  const generateMatch = useCallback(() => {
-    const result = getMatchForVibe(selectedVibe);
-    setMatchResult(result);
-    return result;
-  }, [selectedVibe]);
+  const [location, setLocation] = useState<UserLocation | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const resetMatch = useCallback(() => {
     setMatchResult(null);
@@ -40,10 +39,14 @@ export function DriftProvider({ children }: { children: ReactNode }) {
       selectedVibe,
       setSelectedVibe,
       matchResult,
-      generateMatch,
+      setMatchResult,
+      location,
+      setLocation,
+      locationError,
+      setLocationError,
       resetMatch,
     }),
-    [selectedVibe, matchResult, generateMatch, resetMatch],
+    [selectedVibe, matchResult, location, locationError, resetMatch],
   );
 
   return (

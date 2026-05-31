@@ -4,6 +4,15 @@ export interface SquadMember {
   id: string;
   name: string;
   gradient: string;
+  isSelf?: boolean;
+  isLive?: boolean;
+}
+
+export interface UserLocation {
+  lat: number;
+  lng: number;
+  label: string;
+  accuracy?: number;
 }
 
 export interface MatchResult {
@@ -11,6 +20,8 @@ export interface MatchResult {
   plan: string;
   location: string;
   members: SquadMember[];
+  isLiveMatch?: boolean;
+  distanceKm?: number;
 }
 
 export interface VibeOption {
@@ -18,4 +29,13 @@ export interface VibeOption {
   label: string;
   icon: "zap" | "coffee" | "message-circle";
   accent: string;
+}
+
+export interface SearchPeer {
+  tabId: string;
+  vibe: Vibe;
+  lat: number;
+  lng: number;
+  locationLabel: string;
+  joinedAt: number;
 }

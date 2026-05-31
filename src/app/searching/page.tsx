@@ -1,26 +1,40 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { LiveSearchBanner } from "@/components/LiveSearchBanner";
+import { LocationPill } from "@/components/LocationPill";
 import { PageShell } from "@/components/PageShell";
 import { RadarRings } from "@/components/RadarRings";
 import { StatusText } from "@/components/StatusText";
 import { useDrift } from "@/context/DriftProvider";
-
-const SEARCH_DURATION_MS = 5200;
+import { getClientTabId, startLiveSearch } from "@/lib/liveMatch";
 
 export default function SearchingPage() {
   const router = useRouter();
-  const { generateMatch } = useDrift();
+  const {
+    selectedVibe,
+    setMatchResult,
+    location,
+    locationError,
+  } = useDrift();
+  const [peerCount, setPeerCount] = useState(0);
+  const tabId = useMemo(() => getClientTabId(), []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      generateMatch();
-      router.push("/match");
-    }, SEARCH_DURATION_MS);
+    const cleanup = startLiveSearch({
+      vibe: selectedVibe,
+      location,
+      tabId,
+      onPeerCount: setPeerCount,
+      onMatch: (match) => {
+        setMatchResult(match);
+        router.push("/match");
+      },
+    });
 
-    return () => clearTimeout(timer);
-  }, [generateMatch, router]);
+    return cleanup;
+  }, [selectedVibe, location, tabId, setMatchResult, router]);
 
   return (
     <PageShell className="items-center">
@@ -31,12 +45,24 @@ export default function SearchingPage() {
         <h1 className="mt-3 text-2xl font-semibold tracking-tight">
           Finding your squad
         </h1>
+        <div className="mt-4 flex justify-center">
+          <LocationPill
+            label={location?.label}
+            loading={!location && !locationError}
+            error={locationError}
+            compact
+          />
+        </div>
       </div>
 
       <RadarRings />
 
-      <div className="pb-6">
-        <StatusText />
+      <div className="w-full space-y-4 pb-6">
+        <LiveSearchBanner
+          peerCount={peerCount}
+          locationLabel={location?.label}
+        />
+        <StatusText peerCount={peerCount} />
       </div>
     </PageShell>
   );

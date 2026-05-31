@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MapPin, Sparkles } from "lucide-react";
+import { MapPin, Sparkles, Zap } from "lucide-react";
 import { SquadAvatars } from "@/components/SquadAvatars";
 import type { MatchResult } from "@/lib/types";
 
@@ -29,10 +29,21 @@ export function MatchCard({ match, onConfirm }: MatchCardProps) {
           <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-white/20" />
 
           <div className="mb-6 flex items-center gap-2 text-emerald-400">
-            <Sparkles className="h-4 w-4" />
-            <span className="text-sm font-medium tracking-wide">
-              Squad matched
-            </span>
+            {match.isLiveMatch ? (
+              <>
+                <Zap className="h-4 w-4" />
+                <span className="text-sm font-medium tracking-wide">
+                  Live squad matched
+                </span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                <span className="text-sm font-medium tracking-wide">
+                  Squad matched
+                </span>
+              </>
+            )}
           </div>
 
           <SquadAvatars members={match.members} />
@@ -54,6 +65,11 @@ export function MatchCard({ match, onConfirm }: MatchCardProps) {
           >
             <MapPin className="h-4 w-4 shrink-0" />
             {match.location}
+            {match.distanceKm !== undefined ? (
+              <span className="text-emerald-400/80">
+                · {match.distanceKm < 1 ? "<1 km" : `${match.distanceKm} km`}
+              </span>
+            ) : null}
           </motion.div>
 
           <motion.button

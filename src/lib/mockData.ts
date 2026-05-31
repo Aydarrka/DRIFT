@@ -1,27 +1,27 @@
-import type { MatchResult, Vibe, VibeOption } from "./types";
+import type { MatchResult, SearchPeer, SquadMember, UserLocation, Vibe } from "./types";
 
-export const VIBE_OPTIONS: VibeOption[] = [
+export const VIBE_OPTIONS = [
   {
-    id: "active",
+    id: "active" as const,
     label: "Active",
-    icon: "zap",
+    icon: "zap" as const,
     accent: "#34d399",
   },
   {
-    id: "chill",
+    id: "chill" as const,
     label: "Chill",
-    icon: "coffee",
+    icon: "coffee" as const,
     accent: "#60a5fa",
   },
   {
-    id: "deep-talk",
+    id: "deep-talk" as const,
     label: "Deep Talk",
-    icon: "message-circle",
+    icon: "message-circle" as const,
     accent: "#c084fc",
   },
 ];
 
-const MATCHES: Record<Vibe, Omit<MatchResult, "vibe">> = {
+const MATCHES: Record<Vibe, Omit<MatchResult, "vibe" | "isLiveMatch">> = {
   active: {
     plan: "Катаем на самокатах по Южной Магистрали",
     location: "Южная Магистраль, Бишкек",
@@ -54,6 +54,8 @@ const MATCHES: Record<Vibe, Omit<MatchResult, "vibe">> = {
   },
 };
 
+const LIVE_PEER_NAMES = ["Guest", "Nearby", "Local"];
+
 export const SEARCH_STATUSES = [
   "Сканируем район...",
   "Ищем людей рядом...",
@@ -62,6 +64,89 @@ export const SEARCH_STATUSES = [
   "Почти готово...",
 ];
 
+interface BuildMatchOptions {
+  vibe: Vibe;
+  location: UserLocation | null;
+  peers: SearchPeer[];
+  selfTabId: string;
+  isLiveMatch: boolean;
+}
+
+function buildLiveMembers(
+  peers: SearchPeer[],
+  selfTabId: string,
+  filler: SquadMember[],
+): SquadMember[] {
+  const liveMembers: SquadMember[] = peers.map((peer, index) => {
+    if (peer.tabId === selfTabId) {
+      return {
+        id: peer.tabId,
+        name: "You",
+        gradient: "from-white to-zinc-400",
+        isSelf: true,
+        isLive: true,
+      };
+    }
+
+    return {
+      id: peer.tabId,
+      name: LIVE_PEER_NAMES[index % LIVE_PEER_NAMES.length],
+      gradient: "from-emerald-300 to-teal-500",
+      isLive: true,
+    };
+  });
+
+  const targetSize = Math.min(
+    5,
+    Math.max(3, liveMembers.length + Math.min(2, filler.length)),
+  );
+
+  const combined = [...liveMembers];
+  for (const member of filler) {
+    if (combined.length >= targetSize) break;
+    if (!combined.some((entry) => entry.id === member.id)) {
+      combined.push(member);
+    }
+  }
+
+  return combined;
+}
+
+export function buildMatchResult({
+  vibe,
+  location,
+  peers,
+  selfTabId,
+  isLiveMatch,
+}: BuildMatchOptions): MatchResult {
+  const base = MATCHES[vibe];
+  const locationLabel = location?.label ?? base.location;
+
+  const members =
+    isLiveMatch && peers.length >= 2
+      ? buildLiveMembers(peers, selfTabId, base.members)
+      : base.members;
+
+  const plan = location
+    ? `${base.plan} · стартуем рядом с ${location.label.split(",")[0]}`
+    : base.plan;
+
+  return {
+    vibe,
+    plan,
+    location: locationLabel,
+    members,
+    isLiveMatch,
+    distanceKm: isLiveMatch ? 0.2 : undefined,
+  };
+}
+
 export function getMatchForVibe(vibe: Vibe): MatchResult {
-  return { vibe, ...MATCHES[vibe] };
+  return buildMatchResult({
+    vibe,
+    location: null,
+    peers: [],
+    selfTabId: "solo",
+    isLiveMatch: false,
+  });
 }
