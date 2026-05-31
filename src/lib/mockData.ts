@@ -54,8 +54,6 @@ const MATCHES: Record<Vibe, Omit<MatchResult, "vibe" | "isLiveMatch">> = {
   },
 };
 
-const LIVE_PEER_NAMES = ["Guest", "Nearby", "Local"];
-
 export const SEARCH_STATUSES = [
   "Сканируем район...",
   "Ищем людей рядом...",
@@ -75,9 +73,10 @@ interface BuildMatchOptions {
 function buildLiveMembers(
   peers: SearchPeer[],
   selfTabId: string,
-  filler: SquadMember[],
 ): SquadMember[] {
-  const liveMembers: SquadMember[] = peers.map((peer, index) => {
+  let guestIndex = 0;
+
+  return peers.map((peer) => {
     if (peer.tabId === selfTabId) {
       return {
         id: peer.tabId,
@@ -88,28 +87,14 @@ function buildLiveMembers(
       };
     }
 
+    guestIndex += 1;
     return {
       id: peer.tabId,
-      name: LIVE_PEER_NAMES[index % LIVE_PEER_NAMES.length],
+      name: guestIndex === 1 ? "Guest" : `Guest ${guestIndex}`,
       gradient: "from-emerald-300 to-teal-500",
       isLive: true,
     };
   });
-
-  const targetSize = Math.min(
-    5,
-    Math.max(3, liveMembers.length + Math.min(2, filler.length)),
-  );
-
-  const combined = [...liveMembers];
-  for (const member of filler) {
-    if (combined.length >= targetSize) break;
-    if (!combined.some((entry) => entry.id === member.id)) {
-      combined.push(member);
-    }
-  }
-
-  return combined;
 }
 
 export function buildMatchResult({
@@ -124,7 +109,7 @@ export function buildMatchResult({
 
   const members =
     isLiveMatch && peers.length >= 2
-      ? buildLiveMembers(peers, selfTabId, base.members)
+      ? buildLiveMembers(peers, selfTabId)
       : base.members;
 
   const plan = location
