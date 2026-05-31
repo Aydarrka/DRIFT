@@ -1,10 +1,10 @@
-import { haversineKm, getTabId } from "@/lib/geolocation";
+import { getQueueLocation, haversineKm, getTabId } from "@/lib/geolocation";
 import { buildMatchResult } from "@/lib/mockData";
 import type { MatchResult, SearchPeer, UserLocation, Vibe } from "@/lib/types";
 
 const CHANNEL_NAME = "drift-live-match-v1";
 const STORAGE_KEY = "drift-live-queue";
-const PEER_RADIUS_KM = 8;
+const PEER_RADIUS_KM = 50;
 const MIN_LIVE_SQUAD = 2;
 const LIVE_MATCH_DELAY_MS = 2200;
 const SOLO_FALLBACK_MS = 7500;
@@ -51,33 +51,38 @@ function broadcast(message: MatchMessage) {
 
 function getMatchingPeers(
   vibe: Vibe,
-  location: UserLocation | null,
+  queueLocation: UserLocation,
   tabId: string,
+  hasRealLocation: boolean,
 ): SearchPeer[] {
   const queue = readQueue().filter((peer) => peer.vibe === vibe);
 
-  if (!location) {
-    return queue.filter((peer) => peer.tabId === tabId);
+  if (!hasRealLocation) {
+    return queue;
   }
 
   return queue.filter(
     (peer) =>
-      haversineKm(location.lat, location.lng, peer.lat, peer.lng) <=
-      PEER_RADIUS_KM,
+      haversineKm(
+        queueLocation.lat,
+        queueLocation.lng,
+        peer.lat,
+        peer.lng,
+      ) <= PEER_RADIUS_KM,
   );
 }
 
 function joinQueue(
   vibe: Vibe,
-  location: UserLocation,
+  queueLocation: UserLocation,
   tabId: string,
 ): SearchPeer[] {
   const entry: SearchPeer = {
     tabId,
     vibe,
-    lat: location.lat,
-    lng: location.lng,
-    locationLabel: location.label,
+    lat: queueLocation.lat,
+    lng: queueLocation.lng,
+    locationLabel: queueLocation.label,
     joinedAt: Date.now(),
   };
 
@@ -105,6 +110,8 @@ export function startLiveSearch({
   onMatch,
 }: LiveSearchOptions): () => void {
   const channel = getChannel();
+  const queueLocation = getQueueLocation(location);
+  const hasRealLocation = location !== null;
   let matched = false;
   let liveMatchTimer: ReturnType<typeof setTimeout> | null = null;
   let soloTimer: ReturnType<typeof setTimeout> | null = null;
@@ -120,18 +127,18 @@ export function startLiveSearch({
   const evaluate = () => {
     if (matched) return;
 
-    const peers = getMatchingPeers(vibe, location, tabId);
+    const peers = getMatchingPeers(vibe, queueLocation, tabId, hasRealLocation);
     const others = peers.filter((peer) => peer.tabId !== tabId);
     onPeerCount(others.length);
 
-    if (peers.length >= MIN_LIVE_SQUAD && location) {
+    if (peers.length >= MIN_LIVE_SQUAD) {
       const leaderId = pickLeader(peers);
 
       if (leaderId === tabId && !liveMatchTimer) {
         liveMatchTimer = setTimeout(() => {
           const match = buildMatchResult({
             vibe,
-            location,
+            location: location ?? queueLocation,
             peers,
             selfTabId: tabId,
             isLiveMatch: true,
@@ -149,20 +156,15 @@ export function startLiveSearch({
     }
   };
 
-  if (location) {
-    joinQueue(vibe, location, tabId);
-  }
-
+  joinQueue(vibe, queueLocation, tabId);
   evaluate();
 
   soloTimer = setTimeout(() => {
     finish(
       buildMatchResult({
         vibe,
-        location,
-        peers: location
-          ? getMatchingPeers(vibe, location, tabId)
-          : [],
+        location: location ?? queueLocation,
+        peers: getMatchingPeers(vibe, queueLocation, tabId, hasRealLocation),
         selfTabId: tabId,
         isLiveMatch: false,
       }),

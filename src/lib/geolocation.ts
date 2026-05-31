@@ -1,5 +1,12 @@
 import type { UserLocation } from "./types";
 
+/** Bishkek center — used for queue matching when GPS is unavailable */
+export const BISHKEK_FALLBACK: UserLocation = {
+  lat: 42.8746,
+  lng: 74.5698,
+  label: "Bishkek",
+};
+
 export function haversineKm(
   lat1: number,
   lng1: number,
@@ -31,27 +38,78 @@ export async function reverseGeocode(
     const data = (await res.json()) as { label: string };
     return data.label;
   } catch {
-    return "Near you";
+    return formatCoords(lat, lng);
   }
 }
 
-export function requestUserLocation(): Promise<UserLocation> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Geolocation unavailable"));
-      return;
-    }
+function geolocationErrorMessage(code: number): string {
+  switch (code) {
+    case 1:
+      return "Location blocked — click the pill to retry, or allow location in browser settings";
+    case 2:
+      return "Location unavailable on this device";
+    case 3:
+      return "Location timed out — click the pill to retry";
+    default:
+      return "Location unavailable";
+  }
+}
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude: lat, longitude: lng, accuracy } = position.coords;
-        const label = await reverseGeocode(lat, lng);
-        resolve({ lat, lng, label, accuracy });
-      },
-      (error) => reject(error),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
-    );
+function getPosition(options: PositionOptions): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
   });
+}
+
+export async function requestUserLocation(): Promise<UserLocation> {
+  if (typeof window === "undefined" || !navigator.geolocation) {
+    throw new Error("Geolocation is not supported in this browser");
+  }
+
+  if (!window.isSecureContext) {
+    throw new Error(
+      "Location requires HTTPS or localhost — open http://localhost:3000 (not an IP address)",
+    );
+  }
+
+  let position: GeolocationPosition;
+
+  try {
+    position = await getPosition({
+      enableHighAccuracy: false,
+      timeout: 15000,
+      maximumAge: 300000,
+    });
+  } catch (firstError) {
+    const geoError = firstError as GeolocationPositionError;
+    if (geoError.code === 1) throw firstError;
+
+    position = await getPosition({
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0,
+    });
+  }
+
+  const { latitude: lat, longitude: lng, accuracy } = position.coords;
+  const label = await reverseGeocode(lat, lng);
+
+  return { lat, lng, label, accuracy };
+}
+
+export function getGeolocationErrorMessage(error: unknown): string {
+  if (error instanceof GeolocationPositionError) {
+    return geolocationErrorMessage(error.code);
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "Location unavailable — using demo mode";
+}
+
+/** Location for matching queue — real GPS or Bishkek fallback */
+export function getQueueLocation(location: UserLocation | null): UserLocation {
+  return location ?? BISHKEK_FALLBACK;
 }
 
 export function getTabId(): string {

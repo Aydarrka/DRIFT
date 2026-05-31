@@ -15,6 +15,7 @@ export default function HomePage() {
     resetMatch,
     location,
     locationError,
+    refreshLocation,
   } = useDrift();
 
   const handleStart = () => {
@@ -41,6 +42,7 @@ export default function HomePage() {
             label={location?.label}
             loading={isLocating}
             error={locationError}
+            onRetry={refreshLocation}
             compact
           />
         </div>
@@ -50,9 +52,10 @@ export default function HomePage() {
 
       <VibePills selected={selectedVibe} onSelect={setSelectedVibe} />
 
-      <p className="mt-6 text-center text-xs text-white/30">
-        Demo tip: open two tabs, same vibe — they match live.
-      </p>
+      <div className="mt-6 space-y-2 text-center text-xs text-white/30">
+        <p>Live demo: open two tabs, same vibe, tap I&apos;m bored in both.</p>
+        <p>Works even in demo mode — tabs match on this device.</p>
+      </div>
     </PageShell>
   );
 }

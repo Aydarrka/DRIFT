@@ -19,6 +19,8 @@ interface DriftContextValue {
   setLocation: (location: UserLocation | null) => void;
   locationError: string | null;
   setLocationError: (error: string | null) => void;
+  refreshLocation: () => void;
+  setRefreshLocation: (fn: () => void) => void;
   resetMatch: () => void;
 }
 
@@ -29,6 +31,13 @@ export function DriftProvider({ children }: { children: ReactNode }) {
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null);
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [refreshLocation, setRefreshLocationState] = useState<() => void>(
+    () => () => {},
+  );
+
+  const setRefreshLocation = useCallback((fn: () => void) => {
+    setRefreshLocationState(() => fn);
+  }, []);
 
   const resetMatch = useCallback(() => {
     setMatchResult(null);
@@ -44,9 +53,19 @@ export function DriftProvider({ children }: { children: ReactNode }) {
       setLocation,
       locationError,
       setLocationError,
+      refreshLocation,
+      setRefreshLocation,
       resetMatch,
     }),
-    [selectedVibe, matchResult, location, locationError, resetMatch],
+    [
+      selectedVibe,
+      matchResult,
+      location,
+      locationError,
+      refreshLocation,
+      setRefreshLocation,
+      resetMatch,
+    ],
   );
 
   return (

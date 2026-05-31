@@ -5,8 +5,8 @@ import { useGeolocation } from "@/hooks/useGeolocation";
 import { useDrift } from "@/context/DriftProvider";
 
 export function GeoBootstrap() {
-  const { location, status, error } = useGeolocation();
-  const { setLocation, setLocationError } = useDrift();
+  const { location, status, error, refresh } = useGeolocation();
+  const { setLocation, setLocationError, setRefreshLocation } = useDrift();
 
   useEffect(() => {
     if (location) {
@@ -20,6 +20,10 @@ export function GeoBootstrap() {
       setLocationError(error);
     }
   }, [status, error, setLocationError]);
+
+  useEffect(() => {
+    setRefreshLocation(refresh);
+  }, [refresh, setRefreshLocation]);
 
   return null;
 }

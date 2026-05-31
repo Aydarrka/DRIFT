@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { requestUserLocation } from "@/lib/geolocation";
+import {
+  getGeolocationErrorMessage,
+  requestUserLocation,
+} from "@/lib/geolocation";
 import type { UserLocation } from "@/lib/types";
 
 type GeoStatus = "idle" | "loading" | "ready" | "error";
@@ -20,8 +23,9 @@ export function useGeolocation() {
       setLocation(result);
       setStatus("ready");
       return result;
-    } catch {
-      setError("Location unavailable — using Bishkek demo mode");
+    } catch (err) {
+      const message = getGeolocationErrorMessage(err);
+      setError(message);
       setStatus("error");
       return null;
     }
@@ -36,9 +40,9 @@ export function useGeolocation() {
         setLocation(result);
         setStatus("ready");
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
-        setError("Location unavailable — using Bishkek demo mode");
+        setError(getGeolocationErrorMessage(err));
         setStatus("error");
       });
 
@@ -47,5 +51,5 @@ export function useGeolocation() {
     };
   }, []);
 
-  return { location, status, error, refresh };
+  return { location, status, error, refresh, isDemoMode: status === "error" };
 }

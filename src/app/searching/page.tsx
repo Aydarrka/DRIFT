@@ -17,6 +17,7 @@ export default function SearchingPage() {
     setMatchResult,
     location,
     locationError,
+    refreshLocation,
   } = useDrift();
   const [peerCount, setPeerCount] = useState(0);
   const tabId = useMemo(() => getClientTabId(), []);
@@ -50,6 +51,7 @@ export default function SearchingPage() {
             label={location?.label}
             loading={!location && !locationError}
             error={locationError}
+            onRetry={refreshLocation}
             compact
           />
         </div>
@@ -60,7 +62,7 @@ export default function SearchingPage() {
       <div className="w-full space-y-4 pb-6">
         <LiveSearchBanner
           peerCount={peerCount}
-          locationLabel={location?.label}
+          locationLabel={location?.label ?? (locationError ? "Bishkek (demo)" : null)}
         />
         <StatusText peerCount={peerCount} />
       </div>
