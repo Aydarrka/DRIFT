@@ -7,6 +7,11 @@ const profileListeners = new Set<() => void>();
 let cachedRaw: string | null | undefined;
 let cachedProfile: UserProfile | null = null;
 
+function getStorage(): Storage | null {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage;
+}
+
 function parseProfile(raw: string | null): UserProfile | null {
   if (!raw) return null;
 
@@ -24,9 +29,10 @@ function invalidateProfileCache() {
 }
 
 export function getProfileSnapshot(): UserProfile | null {
-  if (typeof window === "undefined") return null;
+  const storage = getStorage();
+  if (!storage) return null;
 
-  const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+  const raw = storage.getItem(PROFILE_STORAGE_KEY);
 
   if (cachedRaw !== undefined && raw === cachedRaw) {
     return cachedProfile;
@@ -52,11 +58,14 @@ export function loadProfile(): UserProfile | null {
 }
 
 export function saveProfile(profile: UserProfile) {
-  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  getStorage()?.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
   emitProfileChange();
 }
 
 export function clearProfile() {
-  localStorage.removeItem(PROFILE_STORAGE_KEY);
+  getStorage()?.removeItem(PROFILE_STORAGE_KEY);
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+  }
   emitProfileChange();
 }

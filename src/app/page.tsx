@@ -6,11 +6,13 @@ import { LocationPill } from "@/components/LocationPill";
 import { PageShell } from "@/components/PageShell";
 import { VibePills } from "@/components/VibePills";
 import { useDrift } from "@/context/DriftProvider";
+import { LogOut } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
   const {
     profile,
+    logout,
     selectedVibe,
     setSelectedVibe,
     resetMatch,
@@ -29,12 +31,25 @@ export default function HomePage() {
   return (
     <PageShell>
       <header className="mb-2 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/35">
-          DRIFT
-        </p>
+        <div className="flex items-center justify-between">
+          <div className="w-16" />
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/35">
+            DRIFT
+          </p>
+          <button
+            type="button"
+            onClick={logout}
+            className="flex w-16 items-center justify-end text-white/35 transition hover:text-white/70"
+            title="Switch user"
+            aria-label="Switch user"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">
           Hey, {profile?.name}
         </h1>
+        <p className="mt-1 text-sm text-white/35">{profile?.age} yrs</p>
         <p className="mt-2 text-sm text-white/45">
           One tap. One vibe. A squad nearby.
         </p>
@@ -57,7 +72,7 @@ export default function HomePage() {
 
       <div className="mt-6 space-y-2 text-center text-xs text-white/30">
         <p>Live demo: open two tabs, same vibe, tap I&apos;m bored in both.</p>
-        <p>Use different names in each tab to see real squad labels.</p>
+        <p>Each tab can log in as a different person.</p>
       </div>
     </PageShell>
   );

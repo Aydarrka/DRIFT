@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  clearProfile,
   getProfileSnapshot,
   saveProfile,
   subscribeToProfile,
@@ -19,6 +20,7 @@ import type { MatchResult, UserLocation, UserProfile, Vibe } from "@/lib/types";
 interface DriftContextValue {
   profile: UserProfile | null;
   setProfile: (profile: UserProfile) => void;
+  logout: () => void;
   isLoggedIn: boolean;
   selectedVibe: Vibe;
   setSelectedVibe: (vibe: Vibe) => void;
@@ -54,6 +56,13 @@ export function DriftProvider({ children }: { children: ReactNode }) {
     saveProfile(next);
   }, []);
 
+  const logout = useCallback(() => {
+    clearProfile();
+    setLocation(null);
+    setLocationError(null);
+    setMatchResult(null);
+  }, []);
+
   const setRefreshLocation = useCallback((fn: () => void) => {
     setRefreshLocationState(() => fn);
   }, []);
@@ -66,6 +75,7 @@ export function DriftProvider({ children }: { children: ReactNode }) {
     () => ({
       profile,
       setProfile,
+      logout,
       isLoggedIn: profile !== null,
       selectedVibe,
       setSelectedVibe,
@@ -82,6 +92,7 @@ export function DriftProvider({ children }: { children: ReactNode }) {
     [
       profile,
       setProfile,
+      logout,
       selectedVibe,
       matchResult,
       location,
